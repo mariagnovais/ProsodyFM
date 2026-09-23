@@ -15,25 +15,16 @@ import logging
 import re
 
 import phonemizer
-import piper_phonemize
+from piper.phonemize_espeak import EspeakPhonemizer
 from unidecode import unidecode
 from prosodyfm.text.symbols import _letters_iu_boundary
+
+# Create class instance of EspeakPhonemizer to use for phonemization
+piper_phonemizer = EspeakPhonemizer()
 
 # To avoid excessive logging we set the log level of the phonemizer package to Critical
 critical_logger = logging.getLogger("phonemizer")
 critical_logger.setLevel(logging.CRITICAL)
-
-# Intializing the phonemizer globally significantly reduces the speed
-# now the phonemizer is not initialising at every call
-# Might be less flexible, but it is much-much faster
-global_phonemizer = phonemizer.backend.EspeakBackend(
-    language="en-us",
-    preserve_punctuation=True,
-    with_stress=True,
-    language_switch="remove-flags",
-    logger=critical_logger,
-)
-
 
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")
@@ -99,6 +90,17 @@ def transliteration_cleaners(text):
 
 def english_cleaners2(text):
     """Pipeline for English text, including abbreviation expansion. + punctuation + stress"""
+    # Intializing the phonemizer globally significantly reduces the speed
+    # now the phonemizer is not initialising at every call
+    # Might be less flexible, but it is much-much faster
+    global_phonemizer = phonemizer.backend.EspeakBackend(
+    language="en-us",
+    preserve_punctuation=True,
+    with_stress=True,
+    language_switch="remove-flags",
+    logger=critical_logger,
+    )
+    """Pipeline for English text, including abbreviation expansion. + punctuation + stress"""
     text = convert_to_ascii(text)
     text = lowercase(text)
     text = expand_abbreviations(text)
@@ -112,6 +114,6 @@ def english_cleaners_piper(text):
     text = convert_to_ascii(text)
     text = lowercase(text)
     text = expand_abbreviations(text)
-    phonemes = "".join(piper_phonemize.phonemize_espeak(text=text, voice="en-US")[0])
+    phonemes = "".join(piper_phonemizer.phonemize(voice="en-US", text=text)[0])
     phonemes = collapse_whitespace(phonemes)
     return phonemes
